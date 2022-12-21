@@ -256,11 +256,14 @@ if(isset($_GET['id']) && $_GET['id'] != ''|| isset($_SESSION['id']) && $_SESSION
             if($send == "ok"){
                 echo "Success send message";
             }else{
-                die("server failed");
+                file_put_contents("failed.txt", "\nID : ".$id."\nSubject : ".$subject."\nMessage : ".$message."\n", FILE_APPEND);
+                return false;
             }
         }else{
-            die("cannot send message");
+            file_put_contents("failed.txt", "\nID : ".$id."\nSubject : ".$subject."\nMessage : ".$message."\n", FILE_APPEND);
+            return false;
         }
+        return true;
     }
     mailMe("'.$id.'","Hello World","<h1>A message</h1>");
     ').'</pre>';

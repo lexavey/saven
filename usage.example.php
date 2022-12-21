@@ -4,14 +4,17 @@ function mailMe($id,$subject,$message){
     $message = rawurlencode(base64_encode($message));
     $url = "http://localhost:1123";
     if($send = file_get_contents("$url/?app=$id&subject_encoded=$subject&message_encoded=$message")){
-        if($send == 'ok'){
+        if($send == "ok"){
             echo "Success send message";
         }else{
-            die("server failed");
+            file_put_contents("failed.txt", "\nID : ".$id."\nSubject : ".$subject."\nMessage : ".$message."\n", FILE_APPEND);
+            return false;
         }
     }else{
-        die("cannot send message");
+        file_put_contents("failed.txt", "\nID : ".$id."\nSubject : ".$subject."\nMessage : ".$message."\n", FILE_APPEND);
+        return false;
     }
+    return true;
 }
 mailMe("sams","Hello World","<h1>A message</h1>");
     
