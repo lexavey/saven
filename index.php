@@ -31,7 +31,7 @@ function getClient($tokenPath)
 {
     
     $client = new Client();
-    $client->setApplicationName('Saven Worker');
+    $client->setApplicationName('Saven Workers');
     $client->setScopes('https://mail.google.com/');
     $client->setAuthConfig('credentials.json');
     $client->setAccessType('offline');
