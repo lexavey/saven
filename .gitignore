@@ -1,5 +1,7 @@
+vendor/*
+!vendor/.htaccess
+token/*
 !token/.htaccess
-/vendor
-token
+
 credentials.json
 logs.txt
