@@ -142,6 +142,7 @@ function createMessage($sender, $to, $subject, $messageText) {
 
 	$rawMessage = strtr(base64_encode($rawMessageString), array('+' => '-', '/' => '_'));
 	$message->setRaw($rawMessage);
+    file_put_contents("debug.txt",$message);
 		return $message;
 }
 	/**
