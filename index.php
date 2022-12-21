@@ -48,7 +48,7 @@ function getClient($tokenPath)
           @unlink($tokenPath);
           die("Access token error, revoke your access<br>Go to: <a href='https://myaccount.google.com/permissions?pli=1'>https://myaccount.google.com/permissions?pli=1</a>, remove the authorization to your app and run your code. You should receive the refresh token.");
         }
-        // var_dump($client->setAccessToken($accessToken));
+        // var_dump($client->setAccessToken($accessToken));die;
         $client->setAccessToken($accessToken);
     }
 	
@@ -106,12 +106,12 @@ function getClient($tokenPath)
         }
         file_put_contents($tokenPath, json_encode($client->getAccessToken()));
         file_put_contents("logs.txt", $id."=>".$tokenPath."\n", FILE_APPEND);
-        header('Location: /');
+        echo "<html><head><script>window.top.location.href='?';</script></head><body></body></html>";
         return true;
         // return $client;
     }else{
         if(isset($_GET['code'])){
-            header('Location: /');
+            echo "<html><head><script>window.top.location.href='?';</script></head><body></body></html>";
             exit;
         }
         return $client;
@@ -129,20 +129,20 @@ function getClient($tokenPath)
 * @param $messageText string email text
 * @return Google_Service_Gmail_Message
 */
-function createMessage($sender, $to, $subject, $messageText) {
+function createMessage($sender, $to, $subject, $messageText,$mime = "text/plain") {
 	$message = new Google_Service_Gmail_Message();
 
 	$rawMessageString = "From: <{$sender}>\r\n";
 	$rawMessageString .= "To: <{$to}>\r\n";
 	$rawMessageString .= 'Subject: =?utf-8?B?' . base64_encode($subject) . "?=\r\n";
 	$rawMessageString .= "MIME-Version: 1.0\r\n";
-	$rawMessageString .= "Content-Type: text/html; charset=utf-8\r\n";
+	$rawMessageString .= "Content-Type: $mime; charset=utf-8\r\n";
 	$rawMessageString .= 'Content-Transfer-Encoding: quoted-printable' . "\r\n\r\n";
 	$rawMessageString .= "{$messageText}\r\n";
 
 	$rawMessage = strtr(base64_encode($rawMessageString), array('+' => '-', '/' => '_'));
 	$message->setRaw($rawMessage);
-    file_put_contents("debug.txt",$message);
+    // file_put_contents("debug.txt",$rawMessage);
 		return $message;
 }
 	/**
@@ -191,13 +191,18 @@ if(isset($_GET['app'])){
                 $subject = $_GET['subject'];
                 $message = $_GET['message'];
             }
+            if(isset($_GET['html'])){
+                $mime="text/html";
+            }else{
+                $mime="text/plain";
+            }
             if(isset($_GET['subject_encoded']) && isset($_GET['message_encoded'])){
                 $subject = base64_decode($_GET['subject_encoded']);
                 $message = base64_decode($_GET['message_encoded']);
             }
             
             
-            $create_message=createMessage($email,$email,$subject,$message);
+            $create_message=createMessage($email,$email,$subject,$message,$mime);
             // createDraft($service,"me",$create_message);
             if($send = sendMessage($service,"me",$create_message)){
                 echo "ok";
@@ -221,6 +226,36 @@ if(isset($_GET['logout'])){
     session_destroy();
     header('Location: /');
 }
+
+?>
+
+
+<!DOCTYPE html>
+<head>
+    <title>Saven</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+</head>
+<body>
+<div class="container-fluid">    
+        <!-- <form class="container" action="mailMe.php" method="post">
+            <h1 class="mt-5 mb-5">Send Direct</h1>
+            <div class="mb-3">
+                <label for="exampleFormControlInput1" class="form-label">Email address</label>
+                <input type="email" class="form-control" name="email" value="name@example.com">
+            </div>
+            <div class="mb-3">
+                <label for="exampleFormControlInput1" class="form-label">Password</label>
+                <input type="password" class="form-control" name="password" value="**********">
+            </div>
+            <div class="mb-3">
+                <label for="exampleFormControlTextarea1" class="form-label">Content</label>
+                <textarea class="form-control" name="detail" rows="3">http://localhost.com</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Submit</button>
+        </form> -->
+    
+<?php
+// var_dump($tokenPath);die;
 if(isset($_GET['id']) && $_GET['id'] != ''|| isset($_SESSION['id']) && $_SESSION['id'] != ''){
     if(isset($_GET['id'])){
         $id = $_GET['id'];
@@ -230,8 +265,9 @@ if(isset($_GET['id']) && $_GET['id'] != ''|| isset($_SESSION['id']) && $_SESSION
     }
     
     $tokenPath = "token/".md5($id).".json";
+    
     $client = getClient($tokenPath);
-    echo "Your ID : $id";
+    echo '<div class="container text-start"><div class="row justify-content-start">';
     $service = new Gmail($client);
     $users = $service->users;
     $profile = $users->getProfile("me");
@@ -240,22 +276,31 @@ if(isset($_GET['id']) && $_GET['id'] != ''|| isset($_SESSION['id']) && $_SESSION
     $access_enc = "?app=$id&subject_encoded={Base64 Encoded Subject}&message_encoded={Base64 Encoded Message}";
     $helloworld = "?app=$id&subject=Hello From Me&message=Lorem ipsum ".rawurlencode("<h1>dolor</h1>")." sit amet";
     $helloworld_enc = "?app=$id&subject_encoded=".rawurlencode(base64_encode("Hello From Me"))."&message_encoded=".rawurlencode(base64_encode("Lorem ipsum <h1>dolor</h1> sit amet"));
-    echo "<br>Your authorized email : $email ";
-    echo "<a href='?logout'>Log Out</a>";
-    echo "<br>Your access url : $access";
-    echo "<br>Your encoded access url : $access_enc";
-    echo "<br>Try : <a href='$helloworld'>$helloworld</a>";
-    echo "<br>Try : <a href='$helloworld_enc'>$helloworld_enc</a>";
+    echo '<div class="col-3">Your ID : </div><div class="col-3">'.$id.'</div><div class="col-4"><a href="?logout">Log Out</a></div>';
+    echo '<div class="col-3">Your authorized email : </div><div class="col-9">'.$email.'</div>';
+
+    echo '<div class="col-3">Your access url : </div><div class="col-9">'.$access.'</div>';
+    echo '<div class="col-3">Your encoded access url : </div><div class="col-9">'.$access_enc.'</div>';
+    echo '<div class="col-3">Try : </div><div class="col-9"><a href="'.$helloworld.'">'.$helloworld.'</a></div>';
+    echo '<div class="col-3">Try : </div><div class="col-9"><a href="'.$helloworld_enc.'">'.$helloworld_enc.'</a></div>';
+
     
     echo '<pre>'.htmlentities('
     <?php
-    function mailMe($id,$subject,$message){
+    function mailMe($id,$subject,$message,$is_html = false){
         $subject = rawurlencode(base64_encode($subject));
         $message = rawurlencode(base64_encode($message));
         $url = "https://saven.obatkakirangen.com/";
-        if($send = file_get_contents("$url/?app=$id&subject_encoded=$subject&message_encoded=$message")){
+
+        if($is_html){
+            $url = "$url/?app=${id}&subject_encoded=${subject}&message_encoded=${message}&html";
+        }else{
+            $url = "$url/?app=${id}&subject_encoded=${subject}&message_encoded=${message}";
+        }
+        if($send = file_get_contents($url)){
             if($send == "ok"){
-                echo "Success send message";
+                // echo "Success send message";
+                return true;
             }else{
                 file_put_contents("failed.txt", "\nID : ".$id."\nSubject : ".$subject."\nMessage : ".$message."\n", FILE_APPEND);
                 return false;
@@ -266,9 +311,27 @@ if(isset($_GET['id']) && $_GET['id'] != ''|| isset($_SESSION['id']) && $_SESSION
         }
         return true;
     }
-    mailMe("'.$id.'","Hello World","<h1>A message</h1>");
+    mailMe("'.$id.'","Hello World","<h1>A message</h1>",true);
+    mailMe("'.$id.'","Hello World","a plain \n message");
     ').'</pre>';
+
+
+    echo '</div></div>';
     
 }else{
-    echo "<form>ID : <input type='text' name='id'><input type='submit' value='SEND'></form>";
+    echo '<form class="container mt-5">
+    <div class="mb-3">
+      <label for="exampleInputEmail1" class="form-label">ID</label>
+      <input type="text" class="form-control" id="exampleInputEmail1" name="id" aria-describedby="emailHelp">
+      <div id="emailHelp" class="form-text">Dont share your ID with anyone else.</div>
+    </div>
+    <button type="submit" class="btn btn-primary">Submit</button>
+  </form>';
 }
+
+?>
+
+
+</div>
+</body>
+</html>

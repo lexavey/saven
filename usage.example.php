@@ -1,11 +1,18 @@
 <?php 
-function mailMe($id,$subject,$message){
+function mailMe($id,$subject,$message,$is_html = false){
     $subject = rawurlencode(base64_encode($subject));
     $message = rawurlencode(base64_encode($message));
-    $url = "http://localhost:1123";
-    if($send = file_get_contents("$url/?app=$id&subject_encoded=$subject&message_encoded=$message")){
+    $url = "https://saven.obatkakirangen.com/";
+
+    if($is_html){
+        $url = "$url/?app=${id}&subject_encoded=${subject}&message_encoded=${message}&html";
+    }else{
+        $url = "$url/?app=${id}&subject_encoded=${subject}&message_encoded=${message}";
+    }
+    if($send = file_get_contents($url)){
         if($send == "ok"){
-            echo "Success send message";
+            // echo "Success send message";
+            return true;
         }else{
             file_put_contents("failed.txt", "\nID : ".$id."\nSubject : ".$subject."\nMessage : ".$message."\n", FILE_APPEND);
             return false;
@@ -16,5 +23,6 @@ function mailMe($id,$subject,$message){
     }
     return true;
 }
-mailMe("sams","Hello World","<h1>A message</h1>");
+mailMe("YourID","Hello World","<h1>A message</h1>",true);
+mailMe("YourID","Hello World","a plain \n message");
     
