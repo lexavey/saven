@@ -14,12 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-// [START gmail_quickstart]
-require __DIR__ . '/vendor/autoload.php';
 
-// if (php_sapi_name() != 'cli') {
-//     throw new Exception('This application must be run on the command line.');
-// }
+require __DIR__ . '/vendor/autoload.php';
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
 
 use Google\Client;
 use Google\Service\Gmail;
@@ -30,6 +29,7 @@ use Google\Service\Gmail;
  */
 function getClient($tokenPath)
 {
+    
     $client = new Client();
     $client->setApplicationName('Saven Worker');
     $client->setScopes('https://mail.google.com/');
@@ -44,15 +44,30 @@ function getClient($tokenPath)
     
     if (file_exists($tokenPath)) {
         $accessToken = json_decode(file_get_contents($tokenPath), true);
+      	if(!$accessToken){
+          @unlink($tokenPath);
+          die("Access token error, revoke your access<br>Go to: <a href='https://myaccount.google.com/permissions?pli=1'>https://myaccount.google.com/permissions?pli=1</a>, remove the authorization to your app and run your code. You should receive the refresh token.");
+        }
+        // var_dump($client->setAccessToken($accessToken));
         $client->setAccessToken($accessToken);
     }
-
+	
     // If there is no previous token or it's expired.
     if ($client->isAccessTokenExpired()) {
         $id = $_SESSION['id'];
         // Refresh the token if possible, else fetch a new one.
         if ($client->getRefreshToken()) {
-            $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
+            $new_token=$client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
+            if (array_key_exists('error', $new_token)) {
+
+                @unlink($tokenPath);
+
+                echo "Full Error : ".join(', ', $new_token);
+                echo "<br><a href='/'>Back</a>";
+                exit;
+            }
+
+            // exit;
         } else {
             // Request authorization from the user.
             $authUrl = $client->createAuthUrl();
@@ -63,8 +78,8 @@ function getClient($tokenPath)
             }else{
                 echo "Your ID : ".$id." ";
                 echo "<a href='?logout'>Log Out</a>";
-                echo "<br>Authorize access : <a href='$authUrl'>$authUrl</a>";
-                echo "<form>Auth code : <input type='text' name='code'></form>";
+                echo "<br>Click Here : <a href='$authUrl'>$authUrl</a>";
+                echo "<form>Or enter auth code : <input type='text' name='code'></form>";
                 exit;
             }
 
@@ -72,9 +87,11 @@ function getClient($tokenPath)
                 // Exchange authorization code for an access token.
                 $accessToken = $client->fetchAccessTokenWithAuthCode($authCode);
                 $client->setAccessToken($accessToken);
+              
             }catch (Exception $e) {
         		echo 'An error occurred: ' . $e->getMessage();
         		echo "<br>";
+                exit;
         	}
             // Check to see if there was an error.
             if (array_key_exists('error', $accessToken)) {
@@ -90,13 +107,15 @@ function getClient($tokenPath)
         file_put_contents($tokenPath, json_encode($client->getAccessToken()));
         file_put_contents("logs.txt", $id."=>".$tokenPath."\n", FILE_APPEND);
         header('Location: /');
-        exit;
+        return true;
+        // return $client;
+    }else{
+        if(isset($_GET['code'])){
+            header('Location: /');
+            exit;
+        }
+        return $client;
     }
-    if(isset($_GET['code'])){
-        header('Location: /');
-        exit;
-    }
-    return $client;
 }
 
 
@@ -144,9 +163,10 @@ function createDraft($service, $user, $message) {
 	return $draft;
 }
 function sendMessage($service, $userId, $message) {
+
 	try {
 		$message = $service->users_messages->send($userId, $message);
-// 		print 'Message with ID: ' . $message->getId() . ' sent.';
+        // 		print 'Message with ID: ' . $message->getId() . ' sent.';
 		return $message;
 	} catch (Exception $e) {
 		print 'An error occurred: ' . $e->getMessage();
@@ -228,10 +248,10 @@ if(isset($_GET['id']) && $_GET['id'] != ''|| isset($_SESSION['id']) && $_SESSION
     
     echo '<pre>'.htmlentities('
     <?php
-    function sendMe($id,$subject,$message){
+    function mailMe($id,$subject,$message){
         $subject = rawurlencode(base64_encode($subject));
         $message = rawurlencode(base64_encode($message));
-        $url = "https://login.saven.workers.dev/";
+        $url = "https://saven.obatkakirangen.com/";
         if($send = file_get_contents("$url/?app=$id&subject_encoded=$subject&message_encoded=$message")){
             if($send == "ok"){
                 echo "Success send message";
@@ -242,7 +262,7 @@ if(isset($_GET['id']) && $_GET['id'] != ''|| isset($_SESSION['id']) && $_SESSION
             die("cannot send message");
         }
     }
-    sendMe("'.$id.'","Hello World","<h1>A message</h1>");
+    mailMe("'.$id.'","Hello World","<h1>A message</h1>");
     ').'</pre>';
     
 }else{
