@@ -6,3 +6,4 @@ token/*
 credentials.json
 logs.txt
 debug.txt
+logs_service
