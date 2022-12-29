@@ -211,7 +211,7 @@ function sendAttachment($sender, $to, $subject, $messageText,$fileName,$file_pat
     $strRawMessage .= 'Content-Transfer-Encoding: base64' . "\r\n\r\n";
     $strRawMessage .= chunk_split(base64_encode(file_get_contents($filePath)), 76, "\n") . "\r\n";
     $strRawMessage .= "--{$boundary}\r\n";
-    $strRawMessage .= 'Content-Type: text/html; charset=' . $charset . "\r\n";
+    $strRawMessage .= 'Content-Type: text/plain; charset=' . $charset . "\r\n";
     $strRawMessage .= 'Content-Transfer-Encoding: quoted-printable' . "\r\n\r\n";
     $strRawMessage .= $strMailContent . "\r\n";
 
