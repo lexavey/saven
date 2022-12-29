@@ -177,9 +177,10 @@ function sendMessage($service, $userId, $message) {
 
 function sendAttachment($sender, $to, $subject, $messageText,$fileName,$file_path){       
     // $objGMail = new Google_Service_Gmail($client);
+    // $message = new Google_Service_Gmail_Message();
     $strMailContent = $messageText;//'This is a test mail which is <b>sent via</b> using Gmail API client library.<br/><br/><br/>Thanks,<br/><b>Premjith K.K..</b>';
    // $strMailTextVersion = strip_tags($strMailContent, '');
-   $message = new Google_Service_Gmail_Message();
+    // $message = new Google_Service_Gmail_Message();
     $strRawMessage = "";
     $boundary = uniqid(rand(), true);
     $subjectCharset = $charset = 'utf-8';
@@ -219,11 +220,12 @@ function sendAttachment($sender, $to, $subject, $messageText,$fileName,$file_pat
     //Prepare the message in message/rfc822
 
     // $rawMessage = strtr(base64_encode($strRawMessage), array('+' => '-', '/' => '_'));
-        // $rawMessage = rtrim(strtr(base64_encode($strRawMessage), '+/', '-_'), '=');
-        
-    $mime = rtrim(strtr(base64_encode($strRawMessage), '+/', '-_'), '=');
-    $msg = new Google_Service_Gmail_Message();
-    return $mime;
+        $rawMessage = rtrim(strtr(base64_encode($strRawMessage), '+/', '-_'), '=');
+    // $rawMessage = strtr(base64_encode($strRawMessage), array('+' => '-', '/' => '_'));
+    // $message = $message->setRaw($rawMessage);        
+    // $mime = rtrim(strtr(base64_encode($strRawMessage), '+/', '-_'), '=');
+    // $msg = new Google_Service_Gmail_Message();
+    return $rawMessage;
     
     // return $message;
 
@@ -287,15 +289,17 @@ if($data){
                 // fseek($temp, 0);
                 // echo fread($temp, 1024);
                 $tn = tempnam ('/tmp', 'saven-temp-');
-                if(file_put_contents($tn,base64_decode($data['file']['content']))){
+                $content = base64_decode($data['file']['content']);
+                // print_r($data);die;
+                if(file_put_contents($tn,$content)){
                     $fileName = $data['file']['name'];
-                    $msg = new Google_Service_Gmail_Message();
+                    $rawmsg = new Google_Service_Gmail_Message();
                     $create_message=sendAttachment($email,$email,$subject,$message,$fileName,$tn);
                     // var_dump(sendAttachment($email,$email,$subject,$message,$fileName,$tn));die;
-                    
-                    $message = $msg->setRaw($create_message);
-                    // var_dump($msg);die;
-                    if($send = sendMessage($service,"me",$msg)){
+                    // $msg = new Google_Service_Gmail_Message();
+                    $rawmsg->setRaw($create_message);
+                    // var_dump($rawmsg);die;
+                    if($send = sendMessage($service,"me",$rawmsg)){
                         echo "ok";
                         unlink($tn);die;
                     }else{
@@ -348,7 +352,9 @@ if(isset($_GET['app'])){
             
             
             // $create_message=sendAttachment($email,$email,$subject,$message,$mime);
+            
             $create_message=createMessage($email,$email,$subject,$message,$mime);
+            $message = $message->setRaw($rawMessage); 
             // createDraft($service,"me",$create_message);
             if($send = sendMessage($service,"me",$create_message)){
                 echo "ok";
