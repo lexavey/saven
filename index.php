@@ -141,7 +141,7 @@ function createMessage($sender, $to, $subject, $messageText,$mime = "text/plain"
 	$rawMessageString .= "{$messageText}\r\n";
 
 	$rawMessage = strtr(base64_encode($rawMessageString), array('+' => '-', '/' => '_'));
-	$message->setRaw($rawMessage);
+	$message = $message->setRaw($rawMessage);
     // file_put_contents("debug.txt",$rawMessage);
 		return $message;
 }
@@ -175,7 +175,152 @@ function sendMessage($service, $userId, $message) {
 	return null;
 }
 
+function sendAttachment($sender, $to, $subject, $messageText,$fileName,$file_path){       
+    // $objGMail = new Google_Service_Gmail($client);
+    $strMailContent = $messageText;//'This is a test mail which is <b>sent via</b> using Gmail API client library.<br/><br/><br/>Thanks,<br/><b>Premjith K.K..</b>';
+   // $strMailTextVersion = strip_tags($strMailContent, '');
+   $message = new Google_Service_Gmail_Message();
+    $strRawMessage = "";
+    $boundary = uniqid(rand(), true);
+    $subjectCharset = $charset = 'utf-8';
+    $strToMailName = 'me';
+    $strToMail = $to; // 'name@gmail.com';
+    $strSesFromName = 'saven';
+    $strSesFromEmail = $sender; // 'premji341800@gmail.com';
+    $strSubject = $subject;//'Test mail using GMail API - with attachment - ' . date('M d, Y h:i:s A');
 
+    $strRawMessage .= 'To: ' .$strToMailName . " <" . $strToMail . ">" . "\r\n";
+    $strRawMessage .= 'From: '.$strSesFromName . " <" . $strSesFromEmail . ">" . "\r\n";
+
+    $strRawMessage .= 'Subject: =?' . $subjectCharset . '?B?' . base64_encode($strSubject) . "?=\r\n";
+    $strRawMessage .= 'MIME-Version: 1.0' . "\r\n";
+    $strRawMessage .= 'Content-type: Multipart/Mixed; boundary="' . $boundary . '"' . "\r\n";
+
+    $filePath = $file_path;
+    $finfo = finfo_open(FILEINFO_MIME_TYPE); // return mime type ala mimetype extension
+    $mimeType = finfo_file($finfo, $filePath);
+    // $fileName = basename($filePath);
+    $fileData = base64_encode(file_get_contents($filePath));
+
+    $strRawMessage .= "\r\n--{$boundary}\r\n";
+    $strRawMessage .= 'Content-Type: '. $mimeType .'; name="'. $fileName .'";' . "\r\n";            
+    $strRawMessage .= 'Content-ID: <' . $strSesFromEmail . '>' . "\r\n";            
+    $strRawMessage .= 'Content-Description: ' . $fileName . ';' . "\r\n";
+    $strRawMessage .= 'Content-Disposition: attachment; filename="' . $fileName . '"; size=' . filesize($filePath). ';' . "\r\n";
+    $strRawMessage .= 'Content-Transfer-Encoding: base64' . "\r\n\r\n";
+    $strRawMessage .= chunk_split(base64_encode(file_get_contents($filePath)), 76, "\n") . "\r\n";
+    $strRawMessage .= "--{$boundary}\r\n";
+    $strRawMessage .= 'Content-Type: text/html; charset=' . $charset . "\r\n";
+    $strRawMessage .= 'Content-Transfer-Encoding: quoted-printable' . "\r\n\r\n";
+    $strRawMessage .= $strMailContent . "\r\n";
+
+    // var_dump($strRawMessage);
+    //Send Mails
+    //Prepare the message in message/rfc822
+
+    // $rawMessage = strtr(base64_encode($strRawMessage), array('+' => '-', '/' => '_'));
+        // $rawMessage = rtrim(strtr(base64_encode($strRawMessage), '+/', '-_'), '=');
+        
+    $mime = rtrim(strtr(base64_encode($strRawMessage), '+/', '-_'), '=');
+    $msg = new Google_Service_Gmail_Message();
+    return $mime;
+    
+    // return $message;
+
+
+    // try {
+    //     // The message needs to be encoded in Base64URL
+    //     $rawMessage = strtr(base64_encode($strRawMessage), array('+' => '-', '/' => '_'));
+    //     // $mime = rtrim(strtr(base64_encode($strRawMessage), '+/', '-_'), '=');
+    //     $msg = new Google_Service_Gmail_Message();
+    //     echo $rawMessage;
+    //     $msg = $msg->setRaw($rawMessage);
+        
+    //     return $msg;
+    //     // $objSentMsg = $objGMail->users_messages->send("me", $msg);
+
+    //     // print('Message sent object');
+    //    // print($objSentMsg);
+
+    // } catch (Exception $e) {
+    //     print($e->getMessage());
+    //     // unset($_SESSION['access_token']);
+    // }
+}
+$data = json_decode(file_get_contents('php://input'), true);
+// var_dump($data);
+if($data){
+    if(isset($data['app'])){
+        if(!isset($data['file'])||!isset($data['file']['name'])||!isset($data['file']['content'])){
+            die('no file sent, "file":{"name":"name.txt","content":"conetns"}');
+        }
+        $md5 = md5($data['app']);
+        $tokenPath = "token/$md5.json";
+        if(is_file($tokenPath)){
+            $client = getClient($tokenPath);
+            $service = new Gmail($client);
+            $users = $service->users;
+            $profile = $users->getProfile("me");
+            $email = $profile->getEmailAddress();
+            
+            if(isset($data['subject']) && isset($data['message']) || isset($data['subject_encoded']) && isset($data['message_encoded'])){
+                if(isset($data['subject']) && isset($data['message'])){
+                    $subject = $data['subject'];
+                    $message = $data['message'];
+                }
+                if(isset($data['html'])){
+                    $mime="text/html";
+                }else{
+                    $mime="text/plain";
+                }
+                if(isset($data['subject_encoded']) && isset($data['message_encoded'])){
+                    $subject = base64_decode($data['subject_encoded']);
+                    $message = base64_decode($data['message_encoded']);
+                }
+                
+                
+                
+                // $create_message=createMessage($email,$email,$subject,$message,$mime);
+                // createDraft($service,"me",$create_message);
+                // $temp = tmpfile();
+                // fwrite($temp, "writing to tempfile");
+                // fseek($temp, 0);
+                // echo fread($temp, 1024);
+                $tn = tempnam ('/tmp', 'saven-temp-');
+                if(file_put_contents($tn,base64_decode($data['file']['content']))){
+                    $fileName = $data['file']['name'];
+                    $msg = new Google_Service_Gmail_Message();
+                    $create_message=sendAttachment($email,$email,$subject,$message,$fileName,$tn);
+                    // var_dump(sendAttachment($email,$email,$subject,$message,$fileName,$tn));die;
+                    
+                    $message = $msg->setRaw($create_message);
+                    // var_dump($msg);die;
+                    if($send = sendMessage($service,"me",$msg)){
+                        echo "ok";
+                        unlink($tn);die;
+                    }else{
+                        echo "error";
+                        unlink($tn);die;
+                    }
+                }else{
+                    echo "file error";
+                    unlink($tn);die;
+                }
+                
+                
+                // fclose($temp); // this removes the file
+            }else{
+                die("subject or message is needed");
+            }
+            
+        }else{
+            echo "Token error";
+        }
+        
+        
+        die;
+    }
+}
 if(isset($_GET['app'])){
     $md5 = md5($_GET['app']);
     $tokenPath = "token/$md5.json";
@@ -202,6 +347,7 @@ if(isset($_GET['app'])){
             }
             
             
+            // $create_message=sendAttachment($email,$email,$subject,$message,$mime);
             $create_message=createMessage($email,$email,$subject,$message,$mime);
             // createDraft($service,"me",$create_message);
             if($send = sendMessage($service,"me",$create_message)){
